@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Search } from "lucide-react"
-import { CleaningBusinessRequestModal } from "@/components/cleaning-business-request-modal"
-import { CleaningBusinessDetailsModal } from "@/components/cleaning-business-details-modal"
+import { CleaningBusinessRequestModal } from "@/components/cleaning-business/cleaning-business-request-modal"
+import { CleaningBusinessDetailsModal } from "@/components/cleaning-business/cleaning-business-details-modal"
 
 interface CleaningBusiness {
   id: string

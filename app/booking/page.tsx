@@ -4,8 +4,8 @@ import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Search, Filter, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { BookingDetailsModal } from "@/components/booking-details-modal"
-import { AssignBusinessModal } from "@/components/assign-business-modal"
+import { BookingDetailsModal } from "@/components/booking/booking-details-modal"
+import { AssignBusinessModal } from "@/components/cleaning-business/assign-business-modal"
 
 interface Booking {
   id: string

@@ -63,6 +63,7 @@ interface PropertyDetailsModalProps {
     | null
   onApprove?: (id: string) => void
   onDecline?: (id: string) => void
+  onUpdate: (id: string, updatedData: Partial<Property>) => Promise<void>
   onEdit?: (id: string) => void
   onDelete?: (id: string) => Promise<void>
   onVerify: (propertyId: string, propertyManagerId: string) => Promise<void>
@@ -73,6 +74,7 @@ export function PropertyDetailsModal({
   onClose,
   property,
   onApprove,
+  onUpdate,
   onDecline,
   onEdit,
   onDelete,
