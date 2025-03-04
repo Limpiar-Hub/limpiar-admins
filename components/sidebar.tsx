@@ -28,24 +28,30 @@ export function Sidebar() {
   const handleLogout = async () => {
     setIsLoggingOut(true)
     try {
-      const response = await fetch("https://limpiar-backend.onrender.com/api/auth/logout", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
+      // Clear client-side token
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
 
-      if (response.ok) {
-        localStorage.removeItem("token")
-        router.push("/login")
-        toast({
-          title: "Logged out successfully",
-          description: "You have been logged out of your account.",
+      // Attempt to logout on server
+      try {
+        await fetch("https://limpiar-backend.onrender.com/api/auth/logout", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         })
-      } else {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Logout failed")
+      } catch (error) {
+        // Continue with client-side logout even if server logout fails
+        console.error("Server logout failed:", error)
       }
+
+      // Redirect to login page
+      router.push("/")
+
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account.",
+      })
     } catch (error) {
       console.error("Logout error:", error)
       toast({

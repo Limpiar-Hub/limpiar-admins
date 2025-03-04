@@ -74,7 +74,7 @@ export default function SignUpPage() {
           phoneNumber: formData.phoneNumber,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
-          role: "admin", // Changed from "user" to "admin"
+          role: "admin",
         }),
       })
 
@@ -91,8 +91,8 @@ export default function SignUpPage() {
         description: "Please check your phone for the verification code.",
       })
 
-      // Redirect to OTP verification page
-      router.push("/verify")
+      // Redirect to OTP verification page with registration flag
+      router.push("/verify?isRegistration=true")
     } catch (error) {
       console.error("Registration error:", error)
       toast({

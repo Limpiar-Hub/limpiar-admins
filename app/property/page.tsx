@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Search, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { PropertyDetailsModal } from "@/components/property/property-details-modal"
+import { PropertyDetailsModal } from "@/components/property-details-modal"
 import { toast } from "@/components/ui/use-toast"
 
 interface Property {
@@ -16,7 +16,6 @@ interface Property {
   size: string
   propertyManagerId: string
   status: "pending" | "verified"
-  images: string[]
   createdAt: string
   updatedAt: string
   managerId: string
@@ -119,7 +118,7 @@ export default function PropertyPage() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      await response.json() // Consume the response
+      const data = await response.json()
       setProperties(properties.map((p) => (p._id === propertyId ? { ...p, status: "verified" } : p)))
       toast({
         title: "Success",

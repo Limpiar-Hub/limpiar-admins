@@ -78,16 +78,15 @@ export default function UsersPage() {
       })
       if (error instanceof Error && error.message.includes("No authentication token found")) {
         router.push("/users")
-    } finally {
+\
+    } finally 
       setIsLoading(false)
-    }
   }, [activeTab, token, router])
 
-  useEffect(() => {
+  useEffect(() => 
     if (token) {
       fetchUsers()
-    }
-  }, [fetchUsers, token])
+    }, [fetchUsers, token])
 
   const handleUserClick = (user: User) => {
     setSelectedUser(user)

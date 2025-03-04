@@ -1,12 +1,12 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/use-toast"
+import { verifyLoginOTP, resendOTP, verifyRegistrationOTP } from "@/actions/auth"
 
 export default function VerifyPage() {
   const router = useRouter()
@@ -16,11 +16,17 @@ export default function VerifyPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState(60)
+  const [isRegistration, setIsRegistration] = useState(false)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   useEffect(() => {
     const userIdParam = searchParams.get("userId")
     const phoneParam = searchParams.get("phoneNumber")
+    const isRegParam = searchParams.get("isRegistration")
+
+    if (isRegParam === "true") {
+      setIsRegistration(true)
+    }
 
     if (userIdParam && phoneParam) {
       setUserId(userIdParam)
@@ -29,6 +35,7 @@ export default function VerifyPage() {
       const storedPhoneNumber = localStorage.getItem("phoneNumber")
       if (storedPhoneNumber) {
         setPhoneNumber(storedPhoneNumber)
+        setIsRegistration(true)
       } else {
         toast({
           title: "Session information missing",
@@ -54,7 +61,6 @@ export default function VerifyPage() {
     newOtp[index] = value
     setOtp(newOtp)
 
-    // Move to next input if value is entered
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus()
     }
@@ -69,41 +75,32 @@ export default function VerifyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const otpString = otp.join("")
-    if (otpString.length !== 6) return
+    if (otpString.length !== 6 || !phoneNumber) return
 
     setIsLoading(true)
 
     try {
-      const response = await fetch("https://limpiar-backend.onrender.com/api/auth/verify-login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phoneNumber,
-          code: otpString,
-        }),
-      })
+      let result
 
-      const data = await response.json()
-
-      console.log("Full response:", response)
-      console.log("Response status:", response.status)
-      console.log("Response data:", data)
-
-      if (response.ok) {
-        console.log("Verification successful, response:", data)
-        localStorage.setItem("token", data.token)
-        localStorage.removeItem("phoneNumber")
-        // Only redirect on successful verification
-        router.push("/users", { replace: true })
+      if (isRegistration) {
+        result = await verifyRegistrationOTP(phoneNumber, otpString)
       } else {
-        console.error("Verification failed, response:", data)
-        let errorMessage = "Verification failed. Please try again."
-        if (data && data.message) {
-          errorMessage = data.message
-        }
-        throw new Error(errorMessage)
+        result = await verifyLoginOTP(phoneNumber, otpString)
+      }
+
+      if (result.success) {
+        // Clear the phone number from localStorage
+        localStorage.removeItem("phoneNumber")
+
+        toast({
+          title: "Verification successful",
+          description: "You have been verified successfully.",
+        })
+
+        // Redirect to dashboard
+        router.push("/users")
+      } else {
+        throw new Error(result.message)
       }
     } catch (error) {
       console.error("Verification error:", error)
@@ -136,32 +133,19 @@ export default function VerifyPage() {
         return
       }
 
-      console.log("Resend OTP payload:", payload)
+      const result = await resendOTP(payload)
 
-      const response = await fetch("https://limpiar-backend.onrender.com/api/auth/resend-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-
-      console.log("Resend OTP full response:", response)
-      console.log("Resend OTP response status:", response.status)
-
-      const data = await response.json()
-      console.log("Resend OTP response data:", data)
-
-      if (response.ok) {
+      if (result.success) {
         setTimeLeft(60)
         setOtp(["", "", "", "", "", ""])
         toast({
           title: "Code resent",
           description: "A new verification code has been sent to your phone.",
         })
-        // Update userId and phoneNumber if they're returned in the response
-        if (data.userId) setUserId(data.userId)
-        if (data.phoneNumber) setPhoneNumber(data.phoneNumber)
+        if (result.userId) setUserId(result.userId)
+        if (result.phoneNumber) setPhoneNumber(result.phoneNumber)
       } else {
-        throw new Error(data.message || "Failed to resend code")
+        throw new Error(result.message)
       }
     } catch (error) {
       console.error("Resend OTP error:", error)
@@ -235,3 +219,4 @@ export default function VerifyPage() {
     </div>
   )
 }
+

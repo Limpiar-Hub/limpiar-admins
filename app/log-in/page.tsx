@@ -23,24 +23,24 @@ export function LoginForm() {
     setIsLoading(true)
 
     try {
-      // Login request
       const response = await fetch("https://limpiar-backend.onrender.com/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include", // Important for including cookies
       })
 
       const data = await response.json()
 
       if (!response.ok) throw new Error(data.message || "Login failed")
 
-      const userId = data.userId // Extract user ID from login response
+      const userId = data.userId
       if (!userId) throw new Error("User ID not found in response")
 
-      // Fetch user details
       const userDetailsResponse = await fetch(`https://limpiar-backend.onrender.com/api/users/${userId}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
+        credentials: "include", // Important for including cookies
       })
 
       if (!userDetailsResponse.ok) {
