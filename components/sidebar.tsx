@@ -7,6 +7,8 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 import { toast } from "@/components/ui/use-toast"
+import { ROUTES } from "@/lib/constants"
+import { logout } from "@/services/auth-service"
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -14,13 +16,13 @@ export function Sidebar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const menuItems = [
-    { href: "/users", icon: Users, label: "Users" },
-    { href: "/cleaning-business", icon: Briefcase, label: "Cleaning Business" },
-    { href: "/property", icon: Building2, label: "Property" },
-    { href: "/booking", icon: CreditCard, label: "Booking" },
-    { href: "/payment", icon: CreditCard, label: "Payment" },
+    { href: ROUTES.USERS, icon: Users, label: "Users" },
+    { href: ROUTES.CLEANING_BUSINESSES, icon: Briefcase, label: "Cleaning Business" },
+    { href: ROUTES.PROPERTIES, icon: Building2, label: "Property" },
+    { href: ROUTES.BOOKINGS, icon: CreditCard, label: "Booking" },
+    { href: ROUTES.PAYMENTS, icon: CreditCard, label: "Payment" },
     { href: "/analytics", icon: LineChart, label: "Analytics" },
-    { href: "/settings", icon: Settings, label: "Settings" },
+    { href: ROUTES.SETTINGS, icon: Settings, label: "Settings" },
   ]
 
   const footerItems = [{ href: "/support", icon: HeadphonesIcon, label: "Help and Support" }]
@@ -28,25 +30,11 @@ export function Sidebar() {
   const handleLogout = async () => {
     setIsLoggingOut(true)
     try {
-      // Clear client-side token
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
-
-      // Attempt to logout on server
-      try {
-        await fetch("https://limpiar-backend.onrender.com/api/auth/logout", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        })
-      } catch (error) {
-        // Continue with client-side logout even if server logout fails
-        console.error("Server logout failed:", error)
-      }
+      // Logout user
+      logout()
 
       // Redirect to login page
-      router.push("/")
+      router.push(ROUTES.LOGIN)
 
       toast({
         title: "Logged out successfully",

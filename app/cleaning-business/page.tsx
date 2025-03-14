@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Search } from "lucide-react"
-import { CleaningBusinessRequestModal } from "@/components/cleaning-business-request-modal"
-import { CleaningBusinessDetailsModal } from "@/components/cleaning-business-details-modal"
+import { CleaningBusinessRequestModal } from "@/components/cleaning-business/cleaning-business-request-modal"
+import { CleaningBusinessDetailsModal } from "@/components/cleaning-business/cleaning-business-details-modal"
 
 interface CleaningBusiness {
   id: string
@@ -42,8 +42,7 @@ const cleaningBusinesses: CleaningBusiness[] = [
     email: "example@email.com",
     phone: "(219) 555-0114",
     status: "pending",
-  },
-  // Add more businesses as needed
+  },1
 ]
 
 export default function CleaningBusinessPage() {

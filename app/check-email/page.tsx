@@ -1,5 +1,5 @@
 import Image from "next/image"
-import { CheckEmailForm } from "@/components/check-email-form"
+import { CheckEmailForm } from "@/components/auth/check-email-form"
 
 export default function CheckEmailPage() {
   return (

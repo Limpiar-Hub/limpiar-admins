@@ -3,11 +3,12 @@ import "./globals.css"
 import "./fonts.css"
 import type React from "react"
 import { Toaster } from "@/components/ui/toaster"
+import { ThemeProvider } from "@/components/theme-provider"
 
 export const metadata: Metadata = {
-  title: "Limpiar",
-  description: "Property Management System",
-  generator: "v0.dev",
+  title: "Limpiar Admin",
+  description: "Property Management System - Admin Dashboard",
+  generator: "Next.js",
 }
 
 export default function RootLayout({
@@ -16,18 +17,14 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="font-sans">
-        {children}
-        <Toaster />
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )
 }
-
-import "./globals.css"
-
-import "./globals.css"
-
-import "./globals.css"
 

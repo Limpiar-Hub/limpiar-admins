@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
 import { register } from "@/services/auth-service"
-import { STORAGE_KEYS } from "@/lib/constants"
+import { STORAGE_KEYS, ROUTES } from "@/lib/constants"
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -88,7 +88,7 @@ export default function SignUpPage() {
       })
 
       // Redirect to OTP verification page with registration flag
-      router.push("/verify?isRegistration=true")
+      router.push(`${ROUTES.VERIFY}?isRegistration=true`)
     } catch (error) {
       console.error("Registration error:", error)
       toast({

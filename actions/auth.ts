@@ -23,8 +23,7 @@ export async function verifyLoginOTP(phoneNumber: string, code: string) {
       }
     }
 
-    // The backend should set the session cookie automatically
-    // We don't need to manually set it here
+ 
 
     return {
       success: true,
@@ -98,8 +97,6 @@ export async function verifyRegistrationOTP(phoneNumber: string, code: string) {
       }
     }
 
-    // The backend should set the session cookie automatically
-
     return {
       success: true,
       message: "Verification successful",
@@ -113,10 +110,3 @@ export async function verifyRegistrationOTP(phoneNumber: string, code: string) {
     }
   }
 }
-
-// This function is no longer needed as we're using cookies
-// export async function getToken() {
-//   const cookieStore = cookies()
-//   return cookieStore.get("token")?.value
-// }
-

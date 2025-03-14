@@ -3,19 +3,23 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
-import { Search, ChevronDown, Bell } from "lucide-react"
+import { Search, ChevronDown, Bell, Loader2 } from "lucide-react"
 import { UserDetailsModal } from "@/components/user-details-modal"
 import { toast } from "@/components/ui/use-toast"
 import { Button } from "@/components/ui/button"
+import { fetchPropertyManagers, fetchCleaningBusinesses, fetchCleaners, updateUser } from "@/services/api"
 
 interface User {
   _id: string
   fullName: string
   email: string
   phoneNumber: string
-  role: "property-manager" | "cleaning-business" | "limpiador"
+  role: "property_manager" | "cleaning_business" | "cleaner" | "admin"
   isVerified: boolean
+  assignedProperties: string[]
   availability: boolean
+  onboardingChecklist: boolean
+  tasks: string[]
   createdAt: string
   updatedAt: string
 }
@@ -23,7 +27,7 @@ interface User {
 export default function UsersPage() {
   const router = useRouter()
   const [token, setToken] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"property-manager" | "cleaning-business" | "limpiador">("property-manager")
+  const [activeTab, setActiveTab] = useState<"property-manager" | "cleaning-business" | "cleaner">("property-manager")
   const [searchQuery, setSearchQuery] = useState("")
   const [users, setUsers] = useState<User[]>([])
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
@@ -36,38 +40,28 @@ export default function UsersPage() {
     if (storedToken) {
       setToken(storedToken)
     } else {
-      router.push("/users")
+      router.push("/")
     }
   }, [router])
 
   const fetchUsers = useCallback(async () => {
+    if (!token) return
+
     setIsLoading(true)
     setError(null)
+
     try {
-      if (!token) {
-        throw new Error("No authentication token found")
+      let data
+
+      if (activeTab === "property-manager") {
+        data = await fetchPropertyManagers(token)
+      } else if (activeTab === "cleaning-business") {
+        data = await fetchCleaningBusinesses(token)
+      } else if (activeTab === "cleaner") {
+        data = await fetchCleaners(token)
       }
 
-      const baseUrl = "https://limpiar-backend.onrender.com"
-      let endpoint = `${baseUrl}/api/users/${activeTab}s`
-      if (activeTab === "limpiador") {
-        endpoint = `${baseUrl}/api/users/cleaners`
-      }
-
-      console.log("Fetching users from:", endpoint)
-
-      const response = await fetch(endpoint, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      setUsers(data)
+      setUsers(data || [])
     } catch (error) {
       console.error("Error fetching users:", error)
       setError(error instanceof Error ? error.message : "An unknown error occurred")
@@ -76,17 +70,20 @@ export default function UsersPage() {
         description: `Failed to fetch users: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
       })
+
       if (error instanceof Error && error.message.includes("No authentication token found")) {
-        router.push("/users")
-\
-    } finally 
+        router.push("/")
+      }
+    } finally {
       setIsLoading(false)
+    }
   }, [activeTab, token, router])
 
-  useEffect(() => 
+  useEffect(() => {
     if (token) {
       fetchUsers()
-    }, [fetchUsers, token])
+    }
+  }, [fetchUsers, token, activeTab])
 
   const handleUserClick = (user: User) => {
     setSelectedUser(user)
@@ -94,32 +91,27 @@ export default function UsersPage() {
   }
 
   const handleUpdateUser = async (userId: string, updatedData: Partial<User>) => {
-    try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        throw new Error("No authentication token found")
-      }
-
-      const response = await fetch(`https://limpiar-backend.onrender.com/api/users/${userId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updatedData),
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "No authentication token found",
+        variant: "destructive",
       })
+      return
+    }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+    try {
+      const updatedUser = await updateUser(token, userId, updatedData)
 
-      const updatedUser = await response.json()
+      // Update the user in the list
       setUsers(users.map((user) => (user._id === userId ? updatedUser : user)))
-      setSelectedUser(updatedUser)
+
       toast({
         title: "Success",
-        description: "User updated successfully.",
+        description: "User updated successfully",
       })
+
+      return updatedUser
     } catch (error) {
       console.error("Error updating user:", error)
       toast({
@@ -127,6 +119,7 @@ export default function UsersPage() {
         description: `Failed to update user: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
       })
+      throw error
     }
   }
 
@@ -136,6 +129,19 @@ export default function UsersPage() {
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.phoneNumber.includes(searchQuery),
   )
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "property_manager":
+        return "Property Manager"
+      case "cleaning_business":
+        return "Cleaning Business"
+      case "cleaner":
+        return "Cleaner"
+      default:
+        return role
+    }
+  }
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -199,13 +205,13 @@ export default function UsersPage() {
                 </button>
                 <button
                   className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === "limpiador"
+                    activeTab === "cleaner"
                       ? "border-[#0082ed] text-[#0082ed]"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
-                  onClick={() => setActiveTab("limpiador")}
+                  onClick={() => setActiveTab("cleaner")}
                 >
-                  Limpiadors
+                  Cleaners
                 </button>
               </nav>
             </div>
@@ -213,10 +219,13 @@ export default function UsersPage() {
 
           <div className="bg-white rounded-lg border border-gray-200">
             {isLoading ? (
-              <div className="text-center py-4">Loading...</div>
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading users...</span>
+              </div>
             ) : error ? (
-              <div className="text-center py-4 text-red-500">
-                {error}
+              <div className="text-center py-8 text-red-500">
+                <p className="mb-4">{error}</p>
                 <Button onClick={fetchUsers} className="ml-2">
                   Retry
                 </Button>
@@ -245,7 +254,7 @@ export default function UsersPage() {
                 <tbody className="bg-white">
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-4">
+                      <td colSpan={5} className="text-center py-8">
                         No users found
                       </td>
                     </tr>

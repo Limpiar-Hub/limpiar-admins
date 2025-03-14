@@ -2,140 +2,28 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { ArrowLeft, Phone, Mail, MapPin, FileText } from "lucide-react"
+import { ArrowLeft, Phone, Mail, MapPin, Loader2 } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import Image from "next/image"
 import Link from "next/link"
-
-interface Property {
-  type: string
-  name: string
-  location: string
-  images: string[]
-  manager: string
-}
-
-interface Limpiador {
-  name: string
-  email: string
-  phone: string
-  address: string
-  createDate: string
-  updateDate: string
-}
-
-interface Booking {
-  property: string
-  propertyManager: string
-  service: string
-  amount: string
-  date: string
-  time: string
-  additionalNote: string
-  status: "Pending" | "Completed" | "Cancelled"
-}
+import { toast } from "@/components/ui/use-toast"
+import { fetchPropertyManagerById, fetchCleaningBusinessById, fetchCleanerById, fetchUserById } from "@/services/api"
 
 interface User {
-  id: string
-  name: string
+  _id: string
+  fullName: string
   email: string
-  phone: string
+  phoneNumber: string
+  role: "property_manager" | "cleaning_business" | "cleaner" | "admin"
+  isVerified: boolean
+  assignedProperties: string[]
+  availability: boolean
+  onboardingChecklist: boolean
+  tasks: string[]
+  createdAt: string
+  updatedAt: string
   address?: string
   companyName?: string
-  status?: boolean
-}
-
-const propertyManagerUsers: User[] = [
-  {
-    id: "1",
-    name: "Jerome Bell",
-    email: "jerome.bell@example.com",
-    phone: "(270) 555-0117",
-    address: "3517 W. Gray St. Utica, Pennsylvania 57867",
-  },
-]
-
-const cleaningBusinessUsers: User[] = [
-  {
-    id: "2",
-    name: "Robert Fox",
-    email: "robert.fox@example.com",
-    phone: "(219) 555-0114",
-    companyName: "Happy Cleaners LLC.",
-    status: true,
-  },
-]
-
-const limpiadorUsers: User[] = [
-  {
-    id: "3",
-    name: "Kathryn Murphy",
-    email: "kathryn.murphy@example.com",
-    phone: "(307) 555-0133",
-    companyName: "Happy Cleaners LLC.",
-    status: false,
-  },
-]
-
-const properties: Property[] = [
-  {
-    type: "Hospital",
-    name: "Elite Enclave",
-    location: "3605 Parker Rd.",
-    images: ["/placeholder.svg", "/placeholder.svg", "/placeholder.svg"],
-    manager: "Robert Fox",
-  },
-  {
-    type: "Warehouse",
-    name: "Horizon Heights",
-    location: "3890 Poplar Dr.",
-    images: ["/placeholder.svg", "/placeholder.svg", "/placeholder.svg"],
-    manager: "Annette Black",
-  },
-  // Add more properties...
-]
-
-const limpiadores: Limpiador[] = [
-  {
-    name: "Robert Fox",
-    email: "example@email.com",
-    phone: "(219) 555-0114",
-    address: "4517 Washington...",
-    createDate: "11 June, 2025",
-    updateDate: "11 June, 2025",
-  },
-  // Add more limpiadores...
-]
-
-const bookings: Booking[] = [
-  {
-    property: "Opal Ridge Retreat",
-    propertyManager: "Kathryn Murphy",
-    service: "Janitorial",
-    amount: "$ 100.00",
-    date: "11 June, 2025",
-    time: "11:50 am",
-    additionalNote: "Craig provided great...",
-    status: "Pending",
-  },
-  {
-    property: "Sunset Villa",
-    propertyManager: "Darrell Steward",
-    service: "Pool Cleaning",
-    amount: "$ 200.00",
-    date: "11 June, 2025",
-    time: "11:50 am",
-    additionalNote: "Had a great and fr...",
-    status: "Completed",
-  },
-  // Add more bookings...
-]
-
-// Mock function to fetch user data
-const fetchUserData = (id: string) => {
-  // This would be replaced with an actual API call
-  const allUsers = [...propertyManagerUsers, ...cleaningBusinessUsers, ...limpiadorUsers]
-  return allUsers.find((user) => user.id === id)
 }
 
 export default function UserProfile() {
@@ -143,31 +31,97 @@ export default function UserProfile() {
   const params = useParams()
   const [activeTab, setActiveTab] = useState("Property")
   const [userData, setUserData] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (params && params.id) {
-      const user = fetchUserData(params.id as string)
-      setUserData(user || null)
+    const fetchUserData = async () => {
+      if (!params || !params.id) return
+
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          throw new Error("No authentication token found")
+        }
+
+        // Use our API service to fetch the user by ID
+        const userData = await fetchUserById(token, params.id as string)
+
+        // Now fetch detailed information based on role
+        let detailedUser
+        if (userData.role === "property_manager") {
+          detailedUser = await fetchPropertyManagerById(token, params.id as string)
+        } else if (userData.role === "cleaning_business") {
+          detailedUser = await fetchCleaningBusinessById(token, params.id as string)
+        } else if (userData.role === "cleaner") {
+          detailedUser = await fetchCleanerById(token, params.id as string)
+        } else {
+          detailedUser = userData
+        }
+
+        setUserData(detailedUser)
+      } catch (error) {
+        console.error("Error fetching user data:", error)
+        setError(error instanceof Error ? error.message : "An unknown error occurred")
+        toast({
+          title: "Error",
+          description: `Failed to fetch user data: ${error instanceof Error ? error.message : "Unknown error"}`,
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
     }
+
+    fetchUserData()
   }, [params])
 
-  if (!userData) {
-    return <div>Loading...</div>
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-white">
+        <Sidebar />
+        <div className="flex-1 ml-[240px] flex justify-center items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading user details...</span>
+        </div>
+      </div>
+    )
   }
 
-  const userType = userData.companyName
-    ? userData.status
-      ? "Cleaning Business Admin"
-      : "Limpiador"
-    : "Property Manager"
+  if (error || !userData) {
+    return (
+      <div className="flex min-h-screen bg-white">
+        <Sidebar />
+        <div className="flex-1 ml-[240px] flex flex-col items-center justify-center p-8">
+          <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-md text-center">
+            <p className="text-red-500 mb-4">{error || "User not found"}</p>
+            <button onClick={() => router.back()} className="flex items-center gap-2 text-[#0082ed] hover:underline">
+              <ArrowLeft className="h-4 w-4" />
+              Go back
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const userType =
+    userData.role === "property_manager"
+      ? "Property Manager"
+      : userData.role === "cleaning_business"
+        ? "Cleaning Business Admin"
+        : "Limpiador"
 
   const getTabs = () => {
-    switch (userType) {
-      case "Property Manager":
+    switch (userData.role) {
+      case "property_manager":
         return ["Property", "Booking History", "Transaction History"]
-      case "Cleaning Business Admin":
+      case "cleaning_business":
         return ["Limpiador", "Booking History", "Transaction History"]
-      case "Limpiador":
+      case "cleaner":
         return ["Booking History", "Transaction History"]
       default:
         return []
@@ -190,27 +144,33 @@ export default function UserProfile() {
               Users
             </Link>
             <span className="text-gray-500">/</span>
-            <span className="text-gray-900">{userData.name}</span>
+            <span className="text-gray-900">{userData.fullName}</span>
           </div>
 
           {/* Profile Header */}
           <div className="flex items-start gap-6 mb-8">
             <div className="w-24 h-24 rounded-full overflow-hidden">
-              <Image src="/placeholder.svg" alt={userData.name} width={96} height={96} className="object-cover" />
+              <Image
+                src="/placeholder.svg?height=96&width=96"
+                alt={userData.fullName}
+                width={96}
+                height={96}
+                className="object-cover"
+              />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold mb-1">{userData.name}</h1>
+              <h1 className="text-2xl font-semibold mb-1">{userData.fullName}</h1>
               <p className="text-gray-500 mb-2">{userType}</p>
-              {userData.companyName && (
+              {userData.role === "cleaning_business" && (
                 <div className="flex items-center gap-2 text-sm">
-                  <div className="w-5 h-5 bg-red-500 rounded-sm" />
-                  <span>{userData.companyName}</span>
+                  <div className="w-5 h-5 bg-blue-500 rounded-sm" />
+                  <span>{userData.companyName || userData.fullName}</span>
                 </div>
               )}
               <div className="flex flex-col gap-2 mt-4">
                 <div className="flex items-center gap-2 text-gray-500">
                   <Phone className="h-4 w-4" />
-                  <span>{userData.phone}</span>
+                  <span>{userData.phoneNumber}</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-500">
                   <Mail className="h-4 w-4" />
@@ -245,160 +205,45 @@ export default function UserProfile() {
             </nav>
           </div>
 
-          {/* Content */}
-          <div className="bg-white rounded-lg border border-gray-200">
-            {activeTab === "Property" && userType === "Property Manager" && (
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="w-8 py-3 px-4">
-                      <input type="checkbox" className="rounded border-gray-300" />
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Property Type</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Property Name</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Image</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">
-                      Property Manager
-                    </th>
-                    <th className="py-3 px-4"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {properties.map((property, index) => (
-                    <tr key={index} className="border-t border-gray-200">
-                      <td className="py-4 px-4">
-                        <input type="checkbox" className="rounded border-gray-300" />
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{property.type}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{property.name}</td>
-                      <td className="py-4 px-4 text-sm text-gray-500">{property.location}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-1">
-                          {property.images.slice(0, 3).map((img, i) => (
-                            <div key={i} className="w-8 h-8 rounded bg-gray-200" />
-                          ))}
-                          <span className="text-sm text-gray-500">+5</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{property.manager}</td>
-                      <td className="py-4 px-4">
-                        <button className="text-sm text-[#0082ed] hover:underline">Approve</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Content based on active tab */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            {activeTab === "Property" && userData.role === "property_manager" && (
+              <div>
+                <h2 className="text-lg font-medium mb-4">Properties</h2>
+                {userData.assignedProperties && userData.assignedProperties.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {userData.assignedProperties.map((property, index) => (
+                      <div key={index} className="border rounded-lg p-4">
+                        <p className="font-medium">{property}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No properties assigned yet.</p>
+                )}
+              </div>
             )}
 
-            {activeTab === "Limpiador" && userType === "Cleaning Business Admin" && (
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="w-8 py-3 px-4">
-                      <input type="checkbox" className="rounded border-gray-300" />
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Document</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Create Date</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Update Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {limpiadores.map((limpiador, index) => (
-                    <tr key={index} className="border-t border-gray-200">
-                      <td className="py-4 px-4">
-                        <input type="checkbox" className="rounded border-gray-300" />
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{limpiador.name}</td>
-                      <td className="py-4 px-4 text-sm text-gray-500">{limpiador.email}</td>
-                      <td className="py-4 px-4 text-sm text-gray-500">{limpiador.phone}</td>
-                      <td className="py-4 px-4 text-sm text-gray-500">{limpiador.address}</td>
-                      <td className="py-4 px-4">
-                        <button className="hover:bg-gray-100 p-1 rounded">
-                          <FileText className="h-5 w-5 text-gray-400" />
-                        </button>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-500">{limpiador.createDate}</td>
-                      <td className="py-4 px-4 text-sm text-gray-500">{limpiador.updateDate}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {activeTab === "Limpiador" && userData.role === "cleaning_business" && (
+              <div>
+                <h2 className="text-lg font-medium mb-4">Limpiadors</h2>
+                <p className="text-gray-500">No limpiadors assigned yet.</p>
+              </div>
             )}
 
             {activeTab === "Booking History" && (
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="w-8 py-3 px-4">
-                      <input type="checkbox" className="rounded border-gray-300" />
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Property</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">
-                      Property Manager
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Additional Note</th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookings.map((booking, index) => (
-                    <tr key={index} className="border-t border-gray-200">
-                      <td className="py-4 px-4">
-                        <input type="checkbox" className="rounded border-gray-300" />
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{booking.property}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{booking.propertyManager}</td>
-                      <td className="py-4 px-4 text-sm text-gray-500">{booking.service}</td>
-                      <td className="py-4 px-4 text-sm text-gray-500">{booking.amount}</td>
-                      <td className="py-4 px-4 text-sm text-gray-500">{booking.date}</td>
-                      <td className="py-4 px-4 text-sm text-gray-500">{booking.time}</td>
-                      <td className="py-4 px-4 text-sm text-gray-500">{booking.additionalNote}</td>
-                      <td className="py-4 px-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            booking.status === "Completed"
-                              ? "bg-green-100 text-green-800"
-                              : booking.status === "Pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {booking.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div>
+                <h2 className="text-lg font-medium mb-4">Booking History</h2>
+                <p className="text-gray-500">No booking history available.</p>
+              </div>
             )}
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-              <div className="flex items-center">
-                <span className="text-sm text-gray-700">Rows per page:</span>
-                <select className="ml-2 border-gray-300 rounded-md text-sm">
-                  <option>10</option>
-                  <option>20</option>
-                  <option>30</option>
-                </select>
-                <span className="ml-4 text-sm text-gray-700">showing 1-10 of 30 rows</span>
+            {activeTab === "Transaction History" && (
+              <div>
+                <h2 className="text-lg font-medium mb-4">Transaction History</h2>
+                <p className="text-gray-500">No transaction history available.</p>
               </div>
-              <div className="flex items-center space-x-2">
-                <button className="px-3 py-1 rounded border border-gray-300 text-sm text-gray-700" disabled>
-                  Previous
-                </button>
-                <button className="px-3 py-1 rounded border border-gray-300 text-sm text-gray-700">Next</button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

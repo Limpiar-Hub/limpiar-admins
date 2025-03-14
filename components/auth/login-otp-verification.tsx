@@ -5,16 +5,17 @@ import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
-import { LoadingScreen } from "@/components/loading-screen"
+import { LoadingScreen } from "@/components/onboarding/loading-screen"
 import { toast } from "@/components/ui/use-toast"
 
-interface OTPVerificationProps {
+interface LoginOTPVerificationProps {
+  userId: string
   phoneNumber?: string
 }
 
 type VerificationStatus = "idle" | "loading" | "success" | "error"
 
-export function OTPVerification({ phoneNumber }: OTPVerificationProps) {
+export function LoginOTPVerification({ userId, phoneNumber }: LoginOTPVerificationProps) {
   const router = useRouter()
   const [otp, setOtp] = React.useState(["", "", "", "", "", ""])
   const [status, setStatus] = React.useState<VerificationStatus>("idle")
@@ -36,6 +37,7 @@ export function OTPVerification({ phoneNumber }: OTPVerificationProps) {
     newOtp[index] = value
     setOtp(newOtp)
 
+    // Move to next input if value is entered
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus()
     }
@@ -55,17 +57,11 @@ export function OTPVerification({ phoneNumber }: OTPVerificationProps) {
     setStatus("loading")
 
     try {
-      // Get the phone number from localStorage
-      const phoneNumber = localStorage.getItem("phoneNumber")
-      if (!phoneNumber) {
-        throw new Error("Phone number not found. Please try again.")
-      }
-
-      const response = await fetch("https://limpiar-backend.onrender.com/api/auth/verify-register", {
+      const response = await fetch("https://limpiar-backend.onrender.com/api/auth/verify-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phoneNumber,
+          userId,
           code: otpString,
         }),
       })
@@ -79,28 +75,21 @@ export function OTPVerification({ phoneNumber }: OTPVerificationProps) {
         localStorage.setItem("user", JSON.stringify(data.user))
 
         toast({
-          title: "Verification successful",
-          description: "Your account has been verified successfully.",
+          title: "Login successful",
+          description: "You have been logged in successfully.",
         })
 
-        // Clear the phone number from localStorage
-        localStorage.removeItem("phoneNumber")
-
-        // Redirect to dashboard or property page
         router.push("/users")
       } else {
-        if (response.status === 400 && data.message === "Session data is missing. Please register again.") {
-          router.push("/sign-up")
-        } else {
-          throw new Error(data.message || "Verification failed")
-        }
+        throw new Error(data.message || "Login verification failed")
       }
     } catch (error) {
-      console.error("Verification error:", error)
+      console.error("Login verification error:", error)
       setStatus("error")
       toast({
-        title: "Verification failed",
-        description: error instanceof Error ? error.message : "There was an error verifying your account.",
+        title: "Login failed",
+        description:
+          error instanceof Error ? error.message : "There was an error verifying your login. Please try again.",
         variant: "destructive",
       })
     }
@@ -108,15 +97,10 @@ export function OTPVerification({ phoneNumber }: OTPVerificationProps) {
 
   const handleResend = async () => {
     try {
-      const phoneNumber = localStorage.getItem("phoneNumber")
-      if (!phoneNumber) {
-        throw new Error("Phone number not found. Please try again.")
-      }
-
       const response = await fetch("https://limpiar-backend.onrender.com/api/auth/resend-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber }),
+        body: JSON.stringify({ userId }),
       })
 
       const data = await response.json()
@@ -125,7 +109,7 @@ export function OTPVerification({ phoneNumber }: OTPVerificationProps) {
         setTimeLeft(60)
         toast({
           title: "OTP Resent",
-          description: "A new OTP has been sent to your phone number.",
+          description: "A new OTP has been sent to your registered phone number.",
         })
       } else {
         throw new Error(data.message || "Failed to resend OTP")
@@ -134,7 +118,7 @@ export function OTPVerification({ phoneNumber }: OTPVerificationProps) {
       console.error("Resend OTP error:", error)
       toast({
         title: "Failed to resend OTP",
-        description: error instanceof Error ? error.message : "There was an error resending the OTP.",
+        description: error instanceof Error ? error.message : "There was an error resending the OTP. Please try again.",
         variant: "destructive",
       })
     }
@@ -147,8 +131,8 @@ export function OTPVerification({ phoneNumber }: OTPVerificationProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Enter OTP Code</h1>
-        {phoneNumber && <p className="text-muted-foreground">Enter the code sent to {phoneNumber}</p>}
+        <h1 className="text-2xl font-semibold tracking-tight">Enter Login OTP Code</h1>
+        {phoneNumber && <p className="text-muted-foreground">Enter the one-time code sent to {phoneNumber}</p>}
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex justify-center gap-2">
@@ -164,7 +148,7 @@ export function OTPVerification({ phoneNumber }: OTPVerificationProps) {
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               className={cn(
-                "w-12 h-12 text-center text-2xl rounded-md border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0082ed]",
+                "w-12 h-12 text-center text-2xl rounded-md border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0082ed] focus:border-transparent",
                 status === "error" && "border-red-500 text-red-500",
                 status === "success" && "border-green-500 text-green-500",
               )}
@@ -176,9 +160,9 @@ export function OTPVerification({ phoneNumber }: OTPVerificationProps) {
         <Button
           type="submit"
           className="w-full bg-[#0082ed] hover:bg-[#0082ed]/90"
-          disabled={status === ("loading" as VerificationStatus)}
+          disabled={otp.some((digit) => !digit) || status === "loading"}
         >
-          {status === ("loading" as VerificationStatus) ? "Verifying..." : "Confirm"}
+          {status === "loading" ? "Verifying..." : "Log In"}
         </Button>
       </form>
       <button

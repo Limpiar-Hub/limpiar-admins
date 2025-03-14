@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Sidebar } from "@/components/sidebar"
-import { Search, Plus } from "lucide-react"
+import { Search, Plus, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PropertyDetailsModal } from "@/components/property-details-modal"
+import { AddPropertyModal } from "@/components/property/add-property-modal"
 import { toast } from "@/components/ui/use-toast"
+import { fetchProperties, verifyPropertyCreation, deleteProperty, updateProperty } from "@/services/api"
 
 interface Property {
   _id: string
@@ -16,9 +18,10 @@ interface Property {
   size: string
   propertyManagerId: string
   status: "pending" | "verified"
+  images: string[]
   createdAt: string
   updatedAt: string
-  managerId: string
+  managerId?: string
 }
 
 export default function PropertyPage() {
@@ -27,10 +30,11 @@ export default function PropertyPage() {
   const [properties, setProperties] = useState<Property[]>([])
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchProperties = useCallback(async () => {
+  const fetchPropertiesList = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -39,18 +43,8 @@ export default function PropertyPage() {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch("https://limpiar-backend.onrender.com/api/properties", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      setProperties(data.data)
+      const response = await fetchProperties(token)
+      setProperties(response.data || [])
     } catch (error) {
       console.error("Error fetching properties:", error)
       setError(error instanceof Error ? error.message : "An unknown error occurred")
@@ -65,65 +59,38 @@ export default function PropertyPage() {
   }, [])
 
   useEffect(() => {
-    fetchProperties()
-  }, [fetchProperties])
+    fetchPropertiesList()
+  }, [fetchPropertiesList])
 
-  const handlePropertyClick = async (property: Property) => {
-    try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        throw new Error("No authentication token found")
-      }
-
-      const response = await fetch(`https://limpiar-backend.onrender.com/api/properties/${property._id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      setSelectedProperty(data.data)
-      setIsModalOpen(true)
-    } catch (error) {
-      console.error("Error fetching property details:", error)
-      toast({
-        title: "Error",
-        description: `Failed to fetch property details: ${error instanceof Error ? error.message : "Unknown error"}`,
-        variant: "destructive",
-      })
-    }
+  // Update the handlePropertyClick function to fetch property details
+  const handlePropertyClick = (property: Property) => {
+    setSelectedProperty(property)
+    setIsModalOpen(true)
   }
 
-  const verifyProperty = async (propertyId: string, propertyManagerId: string) => {
+  const handleVerifyProperty = async (propertyId: string, propertyManagerId: string) => {
     try {
       const token = localStorage.getItem("token")
       if (!token) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch("https://limpiar-backend.onrender.com/api/properties/verify-creation", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ propertyId, propertyManagerId }),
-      })
+      // Call the API to verify the property
+      const response = await verifyPropertyCreation(token, propertyId, propertyManagerId)
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
+      // Update the property in the list
       setProperties(properties.map((p) => (p._id === propertyId ? { ...p, status: "verified" } : p)))
+
       toast({
         title: "Success",
         description: "Property verified successfully.",
       })
+
+      // Close the modal if it's open
+      setIsModalOpen(false)
+
+      // Refresh the properties list to ensure we have the latest data
+      fetchPropertiesList()
     } catch (error) {
       console.error("Error verifying property:", error)
       toast({
@@ -141,22 +108,17 @@ export default function PropertyPage() {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`https://limpiar-backend.onrender.com/api/properties/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      await deleteProperty(token, id)
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
+      // Remove the property from the list
       setProperties(properties.filter((p) => p._id !== id))
+
       toast({
         title: "Success",
         description: "Property deleted successfully.",
       })
+
+      setIsModalOpen(false)
     } catch (error) {
       console.error("Error deleting property:", error)
       toast({
@@ -174,21 +136,17 @@ export default function PropertyPage() {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`https://limpiar-backend.onrender.com/api/properties/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updatedData),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      // If updatedData is empty, fetch the updated property
+      if (Object.keys(updatedData).length === 0) {
+        fetchPropertiesList()
+        return
       }
 
-      const data = await response.json()
-      setProperties(properties.map((p) => (p._id === id ? data.data : p)))
+      const response = await updateProperty(token, id, updatedData)
+
+      // Update the property in the list
+      setProperties(properties.map((p) => (p._id === id ? { ...p, ...response.data } : p)))
+
       toast({
         title: "Success",
         description: "Property updated successfully.",
@@ -207,7 +165,9 @@ export default function PropertyPage() {
     (property) =>
       property.status === activeTab &&
       (property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        property.address.toLowerCase().includes(searchQuery.toLowerCase())),
+        property.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        property.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        property.subType.toLowerCase().includes(searchQuery.toLowerCase())),
   )
 
   return (
@@ -216,19 +176,23 @@ export default function PropertyPage() {
       <div className="flex-1 ml-[240px]">
         <div className="p-8">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-semibold">Property</h1>
+            <h1 className="text-2xl font-semibold">Properties</h1>
             <div className="flex items-center gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="search"
-                  placeholder="Search"
+                  placeholder="Search properties..."
                   className="pl-10 pr-4 py-2 w-[240px] rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0082ed] focus:border-transparent"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button className="bg-[#0082ed] hover:bg-[#0082ed]/90">
+              <Button variant="outline" className="gap-2">
+                <Filter className="h-4 w-4" />
+                Filter
+              </Button>
+              <Button className="bg-[#0082ed] hover:bg-[#0082ed]/90" onClick={() => setIsAddModalOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Property
               </Button>
@@ -264,13 +228,25 @@ export default function PropertyPage() {
 
           <div className="bg-white rounded-lg border border-gray-200">
             {isLoading ? (
-              <div className="text-center py-4">Loading...</div>
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#0082ed]"></div>
+                <p className="mt-2 text-gray-500">Loading properties...</p>
+              </div>
             ) : error ? (
-              <div className="text-center py-4 text-red-500">
-                {error}
-                <Button onClick={fetchProperties} className="ml-2">
+              <div className="text-center py-8 text-red-500">
+                <p className="mb-2">{error}</p>
+                <Button onClick={fetchPropertiesList} className="mt-2">
                   Retry
                 </Button>
+              </div>
+            ) : filteredProperties.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p className="mb-2">No {activeTab} properties found</p>
+                {activeTab === "pending" && (
+                  <Button onClick={() => setIsAddModalOpen(true)} className="mt-2 bg-[#0082ed] hover:bg-[#0082ed]/90">
+                    Add New Property
+                  </Button>
+                )}
               </div>
             ) : (
               <table className="min-w-full">
@@ -317,7 +293,7 @@ export default function PropertyPage() {
                         {property.status === "pending" && (
                           <button
                             className="text-sm text-[#0082ed] hover:underline"
-                            onClick={() => verifyProperty(property._id, property.propertyManagerId)}
+                            onClick={() => handleVerifyProperty(property._id, property.propertyManagerId)}
                           >
                             Verify
                           </button>
@@ -337,11 +313,17 @@ export default function PropertyPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           property={selectedProperty}
-          onVerify={verifyProperty}
+          onVerify={handleVerifyProperty}
           onDelete={handleDeleteProperty}
           onUpdate={handleUpdateProperty}
         />
       )}
+
+      <AddPropertyModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onPropertyAdded={fetchPropertiesList}
+      />
     </div>
   )
 }

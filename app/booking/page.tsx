@@ -2,13 +2,15 @@
 
 import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
-import { Search, Filter, Plus } from "lucide-react"
+import { Search, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { BookingDetailsModal } from "@/components/booking-details-modal"
-import { AssignBusinessModal } from "@/components/assign-business-modal"
+import { BookingRequestModal } from "@/components/booking/booking-request-modal"
+import { BookingDetailsModal } from "@/components/booking/booking-details-modal"
+import { AssignBusinessModal } from "@/components/booking/assign-business-modal"
 
 interface Booking {
   id: string
+  type: string
   propertyManager: {
     name: string
     avatar?: string
@@ -33,18 +35,10 @@ interface Booking {
   }>
 }
 
-const cleaningBusinesses = [
-  { id: "1", name: "Binford Ltd." },
-  { id: "2", name: "Happy Cleaners LLC." },
-  { id: "3", name: "Abstergo Ltd." },
-  { id: "4", name: "Acme Co." },
-  { id: "5", name: "Biffco Enterprises Ltd." },
-  { id: "6", name: "Ball Corporation" },
-]
-
 const bookings: Booking[] = [
   {
-    id: "1",
+    id: "Hospital",
+    type: "Hospital",
     propertyManager: {
       name: "Jerome Bell",
     },
@@ -65,67 +59,216 @@ const bookings: Booking[] = [
           name: "Jerome Bell",
         },
       },
+    ],
+  },
+  {
+    id: "Warehouse",
+    type: "Warehouse",
+    propertyManager: {
+      name: "Jane Smith",
+    },
+    property: "Horizon Heights",
+    service: "Cleaning",
+    amount: "$ 85.00",
+    date: "12 June, 2025",
+    time: "9:00 AM - 11:00 AM",
+    additionalNote: "Regular cleaning service for the warehouse facility",
+    status: "Pending",
+    timeline: [
       {
-        date: "Saturday, 11 June 2025",
-        time: "11:50 am",
-        event: "Booking request confirm by admin",
+        date: "Sunday, 12 June 2025",
+        time: "10:15 am",
+        event: "Booking requested by",
         user: {
-          name: "Admin",
+          name: "Jane Smith",
         },
       },
     ],
   },
-  // Add more bookings here...
+  {
+    id: "Corporate",
+    type: "Corporate",
+    propertyManager: {
+      name: "Michael Johnson",
+    },
+    property: "Prestige Park Place",
+    service: "Office Cleaning",
+    amount: "$ 150.00",
+    date: "13 June, 2025",
+    time: "6:00 PM - 9:00 PM",
+    additionalNote: "After-hours cleaning service for corporate offices",
+    status: "Pending",
+    timeline: [
+      {
+        date: "Monday, 13 June 2025",
+        time: "2:30 pm",
+        event: "Booking requested by",
+        user: {
+          name: "Michael Johnson",
+        },
+      },
+    ],
+  },
+  {
+    id: "School",
+    type: "School",
+    propertyManager: {
+      name: "Emily Davis",
+    },
+    property: "Premier Plaza",
+    service: "Deep Cleaning",
+    amount: "$ 200.00",
+    date: "14 June, 2025",
+    time: "8:00 AM - 4:00 PM",
+    additionalNote: "Weekend deep cleaning for all classrooms and common areas",
+    status: "Pending",
+    timeline: [
+      {
+        date: "Tuesday, 14 June 2025",
+        time: "9:45 am",
+        event: "Booking requested by",
+        user: {
+          name: "Emily Davis",
+        },
+      },
+    ],
+  },
+  {
+    id: "Industrial",
+    type: "Industrial",
+    propertyManager: {
+      name: "Robert Wilson",
+    },
+    property: "Downtown Dwell",
+    service: "Industrial Cleaning",
+    amount: "$ 300.00",
+    date: "15 June, 2025",
+    time: "7:00 AM - 3:00 PM",
+    additionalNote: "Heavy-duty cleaning for industrial equipment and facilities",
+    status: "Pending",
+    timeline: [
+      {
+        date: "Wednesday, 15 June 2025",
+        time: "11:20 am",
+        event: "Booking requested by",
+        user: {
+          name: "Robert Wilson",
+        },
+      },
+    ],
+  },
+  {
+    id: "University",
+    type: "University",
+    propertyManager: {
+      name: "Sarah Brown",
+    },
+    property: "Summit Square",
+    service: "Campus Cleaning",
+    amount: "$ 250.00",
+    date: "16 June, 2025",
+    time: "6:30 AM - 2:30 PM",
+    additionalNote: "Comprehensive cleaning service for university campus buildings",
+    status: "Pending",
+    timeline: [
+      {
+        date: "Thursday, 16 June 2025",
+        time: "10:05 am",
+        event: "Booking requested by",
+        user: {
+          name: "Sarah Brown",
+        },
+      },
+    ],
+  },
 ]
 
 export default function BookingPage() {
   const [activeTab, setActiveTab] = useState<"pending" | "active" | "inactive">("pending")
   const [searchQuery, setSearchQuery] = useState("")
-  const [rowsPerPage, setRowsPerPage] = useState(10)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+  const [showAssignButton, setShowAssignButton] = useState(false)
 
   const handleBookingClick = (booking: Booking) => {
     setSelectedBooking(booking)
-    setIsDetailsModalOpen(true)
+    if (booking.status === "Pending") {
+      setIsRequestModalOpen(true)
+    } else {
+      setIsDetailsModalOpen(true)
+    }
   }
 
   const handleApproveBooking = () => {
-    // Implement booking approval logic
-    setIsDetailsModalOpen(false)
+    if (selectedBooking) {
+      // Update booking status and add timeline event
+      const updatedBooking = {
+        ...selectedBooking,
+        status: "Not Started" as const,
+        timeline: [
+          ...selectedBooking.timeline,
+          {
+            date: "Saturday, 11 June 2025",
+            time: "11:50 am",
+            event: "Booking request confirm by admin",
+            user: {
+              name: "Admin",
+            },
+          },
+        ],
+      }
+      setSelectedBooking(updatedBooking)
+      setShowAssignButton(true)
+    }
   }
 
-  const handleDeclineBooking = () => {
-    // Implement booking decline logic
-    setIsDetailsModalOpen(false)
-  }
-
-  const handleAssignBusiness = () => {
-    setIsDetailsModalOpen(false)
+  const handleAssignClick = () => {
+    setIsRequestModalOpen(false)
     setIsAssignModalOpen(true)
   }
 
-  const handleBusinessAssigned = (businessId: string) => {
-    // Implement business assignment logic
-    console.log(`Assigned business ${businessId} to booking ${selectedBooking?.id}`)
-    setIsAssignModalOpen(false)
-    // You might want to refresh the booking data here
+  const handleAssignBusiness = (businessName: string) => {
+    if (selectedBooking) {
+      // Update booking with assigned business
+      const updatedBooking = {
+        ...selectedBooking,
+        cleaningBusiness: businessName,
+        status: "Active" as const,
+        timeline: [
+          ...selectedBooking.timeline,
+          {
+            date: "Saturday, 11 June 2025",
+            time: "11:50 am",
+            event: "Booking assigned to",
+            assignedBusiness: businessName,
+            user: {
+              name: "Admin",
+            },
+          },
+        ],
+      }
+      // Update bookings list
+      setSelectedBooking(updatedBooking)
+      setIsAssignModalOpen(false)
+    }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Pending":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-50 text-yellow-800"
       case "On Hold":
-        return "bg-purple-100 text-purple-800"
+        return "bg-purple-50 text-purple-800"
       case "Completed":
-        return "bg-green-100 text-green-800"
+        return "bg-green-50 text-green-800"
       case "Failed":
+        return "bg-red-50 text-red-800"
       case "Refund":
-        return "bg-red-100 text-red-800"
+        return "bg-orange-50 text-orange-800"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-50 text-gray-800"
     }
   }
 
@@ -147,13 +290,9 @@ export default function BookingPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Filter
-              </Button>
               <Button className="bg-[#0082ed] hover:bg-[#0082ed]/90">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Booking
+                Add Property Manager
               </Button>
             </div>
           </div>
@@ -161,21 +300,36 @@ export default function BookingPage() {
           <div className="mb-6">
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex space-x-8">
-                {["pending", "active", "inactive"].map((tab) => (
-                  <button
-                    key={tab}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === tab
-                        ? "border-[#0082ed] text-[#0082ed]"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                    onClick={() => setActiveTab(tab as "pending" | "active" | "inactive")}
-                  >
-                    {`${tab.charAt(0).toUpperCase() + tab.slice(1)} (${
-                      tab === "pending" ? 6 : tab === "active" ? 21 : 6
-                    })`}
-                  </button>
-                ))}
+                <button
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "pending"
+                      ? "border-[#0082ed] text-[#0082ed]"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                  onClick={() => setActiveTab("pending")}
+                >
+                  Pending (6)
+                </button>
+                <button
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "active"
+                      ? "border-[#0082ed] text-[#0082ed]"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                  onClick={() => setActiveTab("active")}
+                >
+                  Active (21)
+                </button>
+                <button
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "inactive"
+                      ? "border-[#0082ed] text-[#0082ed]"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                  onClick={() => setActiveTab("inactive")}
+                >
+                  Inactive (6)
+                </button>
               </nav>
             </div>
           </div>
@@ -184,10 +338,10 @@ export default function BookingPage() {
             <table className="min-w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="w-8 py-3 px-4">
+                  <th className="w-8 py-4 px-6">
                     <input type="checkbox" className="rounded border-gray-300" />
                   </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="py-4 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Booking ID
                   </th>
                   <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -202,84 +356,87 @@ export default function BookingPage() {
                   <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
+                  {activeTab === "active" && (
+                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                  )}
+                  {activeTab === "pending" && <th className="py-3 px-4"></th>}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200">
                 {bookings.map((booking) => (
-                  <tr
-                    key={booking.id}
-                    className="border-t border-gray-200 hover:bg-gray-50 cursor-pointer"
-                    onClick={() => handleBookingClick(booking)}
-                  >
-                    <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" className="rounded border-gray-300" />
+                  <tr key={booking.id} className="hover:bg-gray-50 cursor-pointer">
+                    <td className="py-5 px-6">
+                      <input type="checkbox" className="rounded border-gray-300" onClick={(e) => e.stopPropagation()} />
                     </td>
-                    <td className="py-4 px-4 text-sm text-gray-900">{booking.id}</td>
+                    <td className="py-5 px-6">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-900">{booking.type}</span>
+                        <span className="text-sm text-gray-500">{booking.property}</span>
+                      </div>
+                    </td>
                     <td className="py-4 px-4 text-sm text-gray-900">{booking.propertyManager.name}</td>
                     <td className="py-4 px-4 text-sm text-gray-900">{booking.cleaningBusiness || "-"}</td>
                     <td className="py-4 px-4 text-sm text-gray-900">{booking.service}</td>
                     <td className="py-4 px-4 text-sm text-gray-900">{booking.amount}</td>
-                    <td className="py-4 px-4">
-                      <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                          booking.status,
-                        )}`}
-                      >
-                        {booking.status}
-                      </span>
-                    </td>
+                    {activeTab === "active" && (
+                      <td className="py-5 px-6">
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}
+                        >
+                          {booking.status}
+                        </span>
+                      </td>
+                    )}
+                    {activeTab === "pending" && (
+                      <td className="py-4 px-4">
+                        <button
+                          className="text-[#0082ed] hover:underline text-sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedBooking(booking)
+                            setIsRequestModalOpen(true)
+                          }}
+                        >
+                          Approve
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-              <div className="flex items-center">
-                <span className="text-sm text-gray-700">Rows per page:</span>
-                <select
-                  className="ml-2 border-gray-300 rounded-md text-sm"
-                  value={rowsPerPage}
-                  onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={30}>30</option>
-                  <option value={40}>40</option>
-                  <option value={50}>50</option>
-                </select>
-                <span className="ml-4 text-sm text-gray-700">
-                  showing 1-{Math.min(rowsPerPage, bookings.length)} of {bookings.length} rows
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button className="px-3 py-1 rounded border border-gray-300 text-sm text-gray-700" disabled>
-                  Previous
-                </button>
-                <button className="px-3 py-1 rounded border border-gray-300 text-sm text-gray-700">Next</button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
-      <BookingDetailsModal
-        isOpen={isDetailsModalOpen}
-        onClose={() => setIsDetailsModalOpen(false)}
-        booking={selectedBooking}
-        onApprove={handleApproveBooking}
-        onDecline={handleDeclineBooking}
-        onAssignBusiness={handleAssignBusiness}
-        mode={activeTab === "pending" ? "request" : "details"}
-      />
-
-      <AssignBusinessModal
-        isOpen={isAssignModalOpen}
-        onClose={() => setIsAssignModalOpen(false)}
-        businesses={cleaningBusinesses}
-        onAssign={handleBusinessAssigned}
-      />
+      {selectedBooking && (
+        <>
+          <BookingRequestModal
+            isOpen={isRequestModalOpen}
+            onClose={() => {
+              setIsRequestModalOpen(false)
+              setShowAssignButton(false)
+            }}
+            booking={selectedBooking}
+            onApprove={handleApproveBooking}
+            onDecline={() => setIsRequestModalOpen(false)}
+            showAssignButton={showAssignButton}
+            onAssign={handleAssignClick}
+          />
+          <BookingDetailsModal
+            isOpen={isDetailsModalOpen}
+            onClose={() => setIsDetailsModalOpen(false)}
+            booking={selectedBooking}
+          />
+          <AssignBusinessModal
+            isOpen={isAssignModalOpen}
+            onClose={() => setIsAssignModalOpen(false)}
+            onAssign={handleAssignBusiness}
+          />
+        </>
+      )}
     </div>
   )
 }
