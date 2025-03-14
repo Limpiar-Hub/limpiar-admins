@@ -3,13 +3,15 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
+import { login } from "@/services/auth-service"
+import { STORAGE_KEYS } from "@/lib/constants"
 
 export function LoginForm() {
   const router = useRouter()
@@ -17,31 +19,50 @@ export function LoginForm() {
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(false)
+  const [rememberMe, setRememberMe] = React.useState(false)
+
+  // Check for remembered email
+  React.useEffect(() => {
+    const rememberedEmail = localStorage.getItem(STORAGE_KEYS.REMEMBERED_EMAIL)
+    if (rememberedEmail) {
+      setEmail(rememberedEmail)
+      setRememberMe(true)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      // Simulate a successful login without actually connecting to the backend
-      await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulate network delay
+      // Call the login service
+      const result = await login(email, password)
 
-      // Generate a fake user ID
-      const userId = "user_" + Math.random().toString(36).substring(2, 10)
+      if (!result.success) {
+        throw new Error(result.message)
+      }
 
-      // Store fake token in localStorage
-      localStorage.setItem("token", "fake_token_" + Math.random().toString(36).substring(2, 15))
+      // Save email if remember me is checked
+      if (rememberMe) {
+        localStorage.setItem(STORAGE_KEYS.REMEMBERED_EMAIL, email)
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.REMEMBERED_EMAIL)
+      }
 
-      // Set a fake session cookie
-      document.cookie = "session=fake_session; path=/; max-age=86400"
+      // Store phone number in localStorage for OTP verification
+      if (result.phoneNumber) {
+        localStorage.setItem(STORAGE_KEYS.PHONE_NUMBER, result.phoneNumber)
+      }
 
       toast({
         title: "OTP Sent",
         description: "Please enter the OTP sent to your registered phone number.",
       })
 
-      // Redirect to verify page with the fake user ID and phone number
-      router.push(`/verify?userId=${userId}&phoneNumber=${encodeURIComponent("+1234567890")}`)
+      // Redirect to verify page with the user ID and phone number
+      router.push(
+        `/verify?userId=${result.userId}&phoneNumber=${encodeURIComponent(result.phoneNumber || "")}&isRegistration=false`,
+      )
     } catch (error) {
       console.error("Login error:", error)
       toast({
@@ -99,7 +120,11 @@ export function LoginForm() {
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Checkbox id="remember" />
+            <Checkbox
+              id="remember"
+              checked={rememberMe}
+              onCheckedChange={(checked) => setRememberMe(checked === true)}
+            />
             <label
               htmlFor="remember"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -111,8 +136,19 @@ export function LoginForm() {
             Forgot Password?
           </Link>
         </div>
-        <Button type="submit" className="w-full bg-[#0082ed] hover:bg-[#0082ed]/90" disabled={isLoading}>
-          {isLoading ? "Signing in..." : "Login"}
+        <Button
+          type="submit"
+          className="w-full bg-[#0082ed] hover:bg-[#0082ed]/90"
+          disabled={isLoading || !email || !password}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Signing in...
+            </>
+          ) : (
+            "Login"
+          )}
         </Button>
       </form>
 
@@ -125,3 +161,4 @@ export function LoginForm() {
     </div>
   )
 }
+

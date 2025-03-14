@@ -1,6 +1,7 @@
 import { STORAGE_KEYS } from "@/lib/constants"
 import type { AuthResponse, RegistrationData } from "@/types"
-import { post } from "./http-client"
+
+const API_BASE_URL = "https://limpiar-backend.onrender.com/api"
 
 /**
  * Login with email and password
@@ -8,12 +9,29 @@ import { post } from "./http-client"
  */
 export async function login(email: string, password: string): Promise<AuthResponse> {
   try {
-    const response = await post<any>("/auth/login", { email, password }, { skipAuth: true })
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+      credentials: "include",
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || "Login failed. Please check your credentials.",
+      }
+    }
 
     return {
       success: true,
-      userId: response.userId,
-      message: response.message || "Verification code sent to your phone.",
+      userId: data.userId,
+      phoneNumber: data.phoneNumber,
+      message: data.message || "Verification code sent to your phone.",
     }
   } catch (error) {
     console.error("Login error:", error)
@@ -30,19 +48,35 @@ export async function login(email: string, password: string): Promise<AuthRespon
  */
 export async function verifyLogin(phoneNumber: string, code: string): Promise<AuthResponse> {
   try {
-    const response = await post<any>("/auth/verify-login", { phoneNumber, code }, { skipAuth: true })
+    const response = await fetch(`${API_BASE_URL}/auth/verify-login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ phoneNumber, code }),
+      credentials: "include",
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || "Verification failed. Please try again.",
+      }
+    }
 
     // Store token in localStorage for future requests
-    localStorage.setItem(STORAGE_KEYS.TOKEN, response.token)
+    localStorage.setItem(STORAGE_KEYS.TOKEN, data.token)
 
     // Store user data
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user))
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user))
 
     return {
       success: true,
-      token: response.token,
-      user: response.user,
-      message: response.message || "Login successful.",
+      token: data.token,
+      user: data.user,
+      message: data.message || "Login successful.",
     }
   } catch (error) {
     console.error("Verification error:", error)
@@ -59,14 +93,30 @@ export async function verifyLogin(phoneNumber: string, code: string): Promise<Au
  */
 export async function register(userData: RegistrationData): Promise<AuthResponse> {
   try {
-    const response = await post<any>("/auth/register", userData, { skipAuth: true })
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+      credentials: "include",
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || "Registration failed. Please try again.",
+      }
+    }
 
     // Store phone number for verification
     localStorage.setItem(STORAGE_KEYS.PHONE_NUMBER, userData.phoneNumber)
 
     return {
       success: true,
-      message: response.message || "Verification code sent to your phone.",
+      message: data.message || "Verification code sent to your phone.",
     }
   } catch (error) {
     console.error("Registration error:", error)
@@ -82,19 +132,35 @@ export async function register(userData: RegistrationData): Promise<AuthResponse
  */
 export async function verifyRegistration(phoneNumber: string, code: string): Promise<AuthResponse> {
   try {
-    const response = await post<any>("/auth/verify-register", { phoneNumber, code }, { skipAuth: true })
+    const response = await fetch(`${API_BASE_URL}/auth/verify-register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ phoneNumber, code }),
+      credentials: "include",
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || "Verification failed. Please try again.",
+      }
+    }
 
     // Store token in localStorage for future requests
-    localStorage.setItem(STORAGE_KEYS.TOKEN, response.token)
+    localStorage.setItem(STORAGE_KEYS.TOKEN, data.token)
 
     // Store user data
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user))
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user))
 
     return {
       success: true,
-      token: response.token,
-      user: response.user,
-      message: response.message || "Registration successful.",
+      token: data.token,
+      user: data.user,
+      message: data.message || "Registration successful.",
     }
   } catch (error) {
     console.error("Verification error:", error)
@@ -110,13 +176,29 @@ export async function verifyRegistration(phoneNumber: string, code: string): Pro
  */
 export async function resendOTP(payload: { userId?: string; phoneNumber?: string }): Promise<AuthResponse> {
   try {
-    const response = await post<any>("/auth/resend-otp", payload, { skipAuth: true })
+    const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      credentials: "include",
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || "Failed to resend OTP. Please try again.",
+      }
+    }
 
     return {
       success: true,
-      message: response.message || "OTP code resent successfully.",
-      userId: response.userId,
-      phoneNumber: response.phoneNumber,
+      message: data.message || "OTP code resent successfully.",
+      userId: data.userId,
+      phoneNumber: data.phoneNumber,
     }
   } catch (error) {
     console.error("Resend OTP error:", error)
@@ -132,11 +214,27 @@ export async function resendOTP(payload: { userId?: string; phoneNumber?: string
  */
 export async function requestPasswordReset(email: string): Promise<AuthResponse> {
   try {
-    const response = await post<any>("/auth/reset-password", { email }, { skipAuth: true })
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+      credentials: "include",
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || "Password reset request failed. Please try again.",
+      }
+    }
 
     return {
       success: true,
-      message: response.message || "Password reset link sent to your email.",
+      message: data.message || "Password reset link sent to your email.",
     }
   } catch (error) {
     console.error("Password reset request error:", error)
@@ -152,11 +250,27 @@ export async function requestPasswordReset(email: string): Promise<AuthResponse>
  */
 export async function resetPassword(token: string, newPassword: string): Promise<AuthResponse> {
   try {
-    const response = await post<any>("/auth/reset-password/confirm", { token, newPassword }, { skipAuth: true })
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password/confirm`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ token, newPassword }),
+      credentials: "include",
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || "Password reset failed. Please try again.",
+      }
+    }
 
     return {
       success: true,
-      message: response.message || "Password reset successful.",
+      message: data.message || "Password reset successful.",
     }
   } catch (error) {
     console.error("Password reset error:", error)
