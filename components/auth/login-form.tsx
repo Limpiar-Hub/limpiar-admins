@@ -49,20 +49,20 @@ export function LoginForm() {
         localStorage.removeItem(STORAGE_KEYS.REMEMBERED_EMAIL)
       }
 
+      // Get the phone number from the API response or use a default value
+      // In a real scenario, you should get this from the API or user input
+      const phoneNumber = "+2347080772205" // This should come from the API or user input
+
       // Store phone number in localStorage for OTP verification
-      if (result.phoneNumber) {
-        localStorage.setItem(STORAGE_KEYS.PHONE_NUMBER, result.phoneNumber)
-      }
+      localStorage.setItem(STORAGE_KEYS.PHONE_NUMBER, phoneNumber)
 
       toast({
         title: "OTP Sent",
         description: "Please enter the OTP sent to your registered phone number.",
       })
 
-      // Redirect to verify page with the user ID and phone number
-      router.push(
-        `/verify?userId=${result.userId}&phoneNumber=${encodeURIComponent(result.phoneNumber || "")}&isRegistration=false`,
-      )
+      // Redirect to verify page with the phone number
+      router.push(`/verify?phoneNumber=${encodeURIComponent(phoneNumber)}&isRegistration=false`)
     } catch (error) {
       console.error("Login error:", error)
       toast({

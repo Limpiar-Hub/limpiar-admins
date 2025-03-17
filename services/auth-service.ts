@@ -46,14 +46,20 @@ export async function login(email: string, password: string): Promise<AuthRespon
  * Verify login with phone number and OTP code
  * @returns user data and token
  */
-export async function verifyLogin(phoneNumber: string, code: string): Promise<AuthResponse> {
+export async function verifyLogin(phoneNumber: string, code: string, userId?: string): Promise<AuthResponse> {
   try {
+    // The API expects phoneNumber and code, not userId
+    const requestBody = {
+      phoneNumber,
+      code,
+    }
+
     const response = await fetch(`${API_BASE_URL}/auth/verify-login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ phoneNumber, code }),
+      body: JSON.stringify(requestBody),
       credentials: "include",
     })
 

@@ -41,7 +41,10 @@ export default function VerifyPage() {
       const storedPhoneNumber = localStorage.getItem(STORAGE_KEYS.PHONE_NUMBER)
       if (storedPhoneNumber) {
         setPhoneNumber(storedPhoneNumber)
-        setIsRegistration(true)
+        if (isRegParam !== "true") {
+          // If not explicitly marked as registration, don't assume it is
+          setIsRegistration(false)
+        }
       } else {
         toast({
           title: "Session information missing",
@@ -101,6 +104,7 @@ export default function VerifyPage() {
           throw new Error("Phone number not found. Please try again.")
         }
 
+        // Always use phoneNumber for verification
         result = await verifyLogin(phoneNumber, otpString)
       }
 
