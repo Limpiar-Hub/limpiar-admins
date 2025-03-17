@@ -31,10 +31,17 @@ export default function VerifyPage() {
       setIsRegistration(true)
     }
 
+    // Set userId from URL param or localStorage
     if (userIdParam) {
       setUserId(userIdParam)
+    } else {
+      const storedUserId = localStorage.getItem(STORAGE_KEYS.USER_ID)
+      if (storedUserId) {
+        setUserId(storedUserId)
+      }
     }
 
+    // Set phoneNumber from URL param or localStorage
     if (phoneParam) {
       setPhoneNumber(decodeURIComponent(phoneParam))
     } else {
@@ -42,7 +49,7 @@ export default function VerifyPage() {
       if (storedPhoneNumber) {
         setPhoneNumber(storedPhoneNumber)
         if (isRegParam !== "true") {
-          // If not explicitly marked as registration, don't assume it is
+          
           setIsRegistration(false)
         }
       } else {
@@ -100,12 +107,12 @@ export default function VerifyPage() {
         result = await verifyRegistration(phoneNumber, otpString)
       } else {
         // Handle login verification
-        if (!phoneNumber) {
-          throw new Error("Phone number not found. Please try again.")
+        if (!phoneNumber && !userId) {
+          throw new Error("User information not found. Please try again.")
         }
 
-        // Always use phoneNumber for verification
-        result = await verifyLogin(phoneNumber, otpString)
+        // Use userId and phoneNumber for verification
+        result = await verifyLogin(phoneNumber || "", otpString, userId || undefined)
       }
 
       if (!result.success) {
@@ -119,8 +126,9 @@ export default function VerifyPage() {
           : "You have been logged in successfully.",
       })
 
-      // Clear the phone number from localStorage if it exists
+      // Clear the stored data from localStorage
       localStorage.removeItem(STORAGE_KEYS.PHONE_NUMBER)
+      localStorage.removeItem(STORAGE_KEYS.USER_ID)
 
       // Redirect to dashboard
       router.push(ROUTES.USERS)

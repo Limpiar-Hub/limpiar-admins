@@ -51,6 +51,7 @@ export const ROUTES = {
 export const STORAGE_KEYS = {
   TOKEN: "token",
   USER: "user",
+  USER_ID: "userId",
   PHONE_NUMBER: "phoneNumber",
   REMEMBERED_EMAIL: "rememberedEmail",
   RESET_EMAIL: "resetEmail",

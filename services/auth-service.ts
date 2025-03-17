@@ -48,11 +48,8 @@ export async function login(email: string, password: string): Promise<AuthRespon
  */
 export async function verifyLogin(phoneNumber: string, code: string, userId?: string): Promise<AuthResponse> {
   try {
-    // The API expects phoneNumber and code, not userId
-    const requestBody = {
-      phoneNumber,
-      code,
-    }
+    // The API expects phoneNumber and code, or userId and code
+    const requestBody = userId ? { userId, code } : { phoneNumber, code }
 
     const response = await fetch(`${API_BASE_URL}/auth/verify-login`, {
       method: "POST",
